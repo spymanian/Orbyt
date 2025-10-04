@@ -1,0 +1,53 @@
+{
+  "name": "orbyt",
+  "displayName": "Orbyt",
+  "description": "See your codebase as a living map. Repo visualization, AI explanations, and analytics.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "orbyt.start",
+        "title": "Start Orbyt"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.28.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.104.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.36.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4",
+    "@sigma/export-image": "^3.0.0",
+    "@sigma/layer-webgl": "^3.0.0",
+    "@sigma/node-image": "^3.0.0",
+    "esbuild": "^0.25.10",
+    "graphology": "^0.26.0",
+    "lodash": "^4.17.21",
+    "sigma": "^3.0.2"
+  }
+}
