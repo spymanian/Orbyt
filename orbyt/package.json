@@ -42,12 +42,15 @@
   "dependencies": {
     "@babel/parser": "^7.28.4",
     "@babel/traverse": "^7.28.4",
+    "@google/genai": "^1.22.0",
     "@sigma/export-image": "^3.0.0",
     "@sigma/layer-webgl": "^3.0.0",
     "@sigma/node-image": "^3.0.0",
+    "dotenv": "^17.2.3",
     "esbuild": "^0.25.10",
     "graphology": "^0.26.0",
     "lodash": "^4.17.21",
+    "node-fetch": "^3.3.2",
     "sigma": "^3.0.2"
   }
 }
