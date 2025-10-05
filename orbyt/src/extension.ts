@@ -309,8 +309,6 @@ Explain the purpose and functionality of the file ${path.basename(filePath)} in 
 3. Give a concise technical description for an expert.
 Keep each paragraph under 5 sentences and do not use markdown or formatting.
 
-make the titles bold markdown
-
 SEPERATE BY Explain it Like I'm 5, INTERMEDIATE, TECHNICAL as the titles of each paragraph.
 Code (first 3000 characters):
 ${code.slice(0, 3000)}
@@ -362,122 +360,57 @@ function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: s
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg: #ffffff;
-        --fg: #1a1a1a;
-        --card: #f7f8fa;
-        --accent: #007aff;
-        --muted: #666;
-        --shadow: rgba(0,0,0,0.08);
-        --tooltip-bg: rgba(0,0,0,0.8);
+        --bg:#ffffff; --fg:#1a1a1a; --card:#f7f8fa;
+        --accent:#007aff; --muted:#666; --shadow:rgba(0,0,0,0.08);
+        --tooltip-bg:rgba(0,0,0,0.8);
       }
-
-      html,body {
-        margin: 0; padding: 0; width: 100%; height: 100%;
-        background: var(--bg);
-        color: var(--fg);
-        font-family: 'Inter', sans-serif;
-        overflow: hidden;
-        transition: background 0.4s ease, color 0.4s ease;
+      html,body{
+        margin:0;padding:0;width:100%;height:100%;
+        background:var(--bg);color:var(--fg);
+        font-family:'Inter',sans-serif;overflow:hidden;
+        transition:background .4s ease,color .4s ease;
       }
-
-      #graph-container { width:100%; height:100vh; opacity:0; transition:opacity .6s ease; }
-
-      #status {
-        position:absolute; bottom:20px; left:20px;
-        background: var(--card);
-        box-shadow: 0 2px 10px var(--shadow);
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-size: 13px;
-        color: var(--muted);
-        backdrop-filter: blur(6px);
-      }
-
-      .tooltip {
-        position:absolute;
-        background: var(--tooltip-bg);
-        color:#fff;
-        border-radius:8px;
-        padding:8px 12px;
-        font-size:13px;
-        opacity:0;
-        pointer-events:none;
-        transition:opacity .3s ease,transform .3s ease;
-        transform:translateY(4px);
-      }
+      #graph-container{width:100%;height:100vh;opacity:0;transition:opacity .6s ease;}
+      #status{position:absolute;bottom:20px;left:20px;background:var(--card);
+        box-shadow:0 2px 10px var(--shadow);border-radius:10px;padding:10px 14px;
+        font-size:13px;color:var(--muted);backdrop-filter:blur(6px);}
+      .tooltip{position:absolute;background:var(--tooltip-bg);color:#fff;
+        border-radius:8px;padding:8px 12px;font-size:13px;opacity:0;
+        pointer-events:none;transition:opacity .3s ease,transform .3s ease;
+        transform:translateY(4px);}
       .tooltip.show{opacity:1;transform:translateY(0);}
-      
-
-      #infoBox {
-        position:absolute; top:0; right:-360px;
-        width:340px; height:100%;
-        background: var(--card);
-        box-shadow:-4px 0 16px var(--shadow);
-        padding:24px; font-size:14px;
-        overflow-y:auto;
-        transition:right .4s cubic-bezier(.4,0,.2,1);
-        backdrop-filter:blur(10px);
-      }
-      #infoBox.visible{ right:0; }
-
-      #infoBox button {
-        margin-top:8px; margin-right:8px;
-        padding:6px 10px;
-        border:none; border-radius:6px;
-        background: var(--accent); color:#fff;
-        font-weight:500; cursor:pointer;
-        transition:opacity .2s,transform .2s;
-      }
-      #infoBox button:hover{ opacity:.85; transform:translateY(-1px); }
-
-      #commandBar {
-        position:absolute; bottom:24px; right:24px;
-        display:flex; flex-direction:column; gap:10px;
-      }
-      .cmdBtn {
-        width:40px; height:40px;
-        background: var(--card);
-        border-radius:50%;
-        box-shadow:0 2px 8px var(--shadow);
-        display:flex; align-items:center; justify-content:center;
-        font-size:18px;
-        cursor:pointer;
-        color: var(--fg);
-        transition: all .25s ease;
-      }
-      .cmdBtn:hover {
-        transform:translateY(-3px);
-        background: var(--accent);
-        color:#fff;
-      }
-
-      #minimap {
-        position:absolute; top:20px; right:20px;
-        width:180px; height:120px;
-        border:2px solid var(--accent);
-        border-radius:8px;
-        background: var(--card);
-        box-shadow:0 2px 8px var(--shadow);
-        overflow:hidden; cursor:grab;
-      }
-      #minimap:active{cursor:grabbing;}
+      #infoBox{position:absolute;top:0;right:-360px;width:340px;height:100%;
+        background:var(--card);box-shadow:-4px 0 16px var(--shadow);
+        padding:24px;font-size:14px;overflow-y:auto;
+        transition:right .4s cubic-bezier(.4,0,.2,1);}
+      #infoBox.visible{right:0;}
+      #infoBox button{margin-top:8px;margin-right:8px;padding:6px 10px;
+        border:none;border-radius:6px;background:var(--accent);color:#fff;
+        font-weight:500;cursor:pointer;transition:opacity .2s,transform .2s;}
+      #infoBox button:hover{opacity:.85;transform:translateY(-1px);}
+      #closeInfo{position:absolute;top:12px;right:14px;background:transparent;
+        border:none;font-size:18px;color:var(--muted);cursor:pointer;
+        transition:color .2s ease,transform .2s ease;}
+      #closeInfo:hover{color:var(--accent);transform:scale(1.15);}
+      #healthBox{position:absolute;top:20px;left:20px;background:var(--card);
+        border-radius:10px;box-shadow:0 2px 8px var(--shadow);
+        padding:10px 16px;text-align:center;width:150px;}
+      #healthBox h4{margin:4px 0;font-size:14px;color:var(--fg);}
+      #paletteOverlay{position:fixed;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);
+        display:none;align-items:center;justify-content:center;z-index:999;}
+      #paletteBox{background:var(--card);border-radius:10px;
+        box-shadow:0 2px 12px var(--shadow);width:360px;padding:20px;}
+      #paletteBox input{width:100%;padding:10px;border-radius:6px;
+        border:1px solid #ddd;outline:none;font-size:14px;margin-bottom:10px;}
+      #paletteList div{padding:6px 8px;border-radius:6px;cursor:pointer;}
+      #paletteList div:hover{background:var(--accent);color:#fff;}
+      #minimap{position:absolute;top:20px;right:20px;width:180px;height:120px;
+        border:2px solid var(--accent);border-radius:8px;background:var(--card);
+        box-shadow:0 2px 8px var(--shadow);overflow:hidden;cursor:grab;}
       #miniCanvas{width:100%;height:100%;}
-      #viewRect {
-        position:absolute;
-        border:2px solid var(--accent);
-        background: rgba(0,122,255,0.1);
-        border-radius:4px;
-        pointer-events:none;
-      }
-
-      .ripple {
-        position:absolute;
-        border-radius:50%;
-        transform:scale(0);
-        animation:rippleAnim .6s linear;
-        background: rgba(0,122,255,0.25);
-        pointer-events:none;
-      }
+      .ripple{position:absolute;border-radius:50%;transform:scale(0);
+        animation:rippleAnim .6s linear;background:rgba(0,122,255,0.25);}
       @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
     </style>
   </head>
@@ -485,10 +418,19 @@ function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: s
     <div id="graph-container"></div>
     <div id="status">🌀 Building your code map...</div>
     <div class="tooltip" id="tooltip"></div>
-    <div id="commandBar"><div id="themeToggle" class="cmdBtn">☀️</div></div>
-    <div id="minimap">
-      <canvas id="miniCanvas" width="180" height="120"></canvas>
-      <div id="viewRect"></div>
+    <div id="minimap"><canvas id="miniCanvas" width="180" height="120"></canvas></div>
+
+    <div id="healthBox">
+      <h4>📊 Health Dashboard</h4>
+      <canvas id="healthCanvas" width="120" height="120"></canvas>
+      <p id="metricText" style="font-size:12px;color:var(--muted);margin-top:6px;"></p>
+    </div>
+
+    <div id="paletteOverlay">
+      <div id="paletteBox">
+        <input type="text" id="paletteInput" placeholder="Type a command..." />
+        <div id="paletteList"></div>
+      </div>
     </div>
 
     <script nonce="${nonce}" src="${graphologyUri}"></script>
@@ -500,193 +442,181 @@ function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: s
 
       const tooltip = document.getElementById("tooltip");
       const status = document.getElementById("status");
-      const mini = document.getElementById("minimap");
       const miniCanvas = document.getElementById("miniCanvas");
       const ctxMini = miniCanvas.getContext("2d");
-      const viewRect = document.getElementById("viewRect");
       const container = document.getElementById("graph-container");
+      const paletteOverlay = document.getElementById("paletteOverlay");
+      const paletteInput = document.getElementById("paletteInput");
+      const paletteList = document.getElementById("paletteList");
 
       window.addEventListener("message", (e) => {
         const msg = e.data;
-        if (msg.type === "graphData") {
-          const { nodes, edges, stats } = msg.data;
-          const Graphology = window.graphology?.Graph || window.Graph;
-          const Sigma = window.sigma?.Sigma || window.Sigma;
-          const graph = new Graphology();
+        if (msg.type !== "graphData") return;
+        const { nodes, edges, stats } = msg.data;
 
-          const clusters = [...new Set(nodes.map((n) => n.cluster))];
-          const R = 350;
-          clusters.forEach((c, i) => {
-            const cx = Math.cos((i / clusters.length) * 2 * Math.PI) * R;
-            const cy = Math.sin((i / clusters.length) * 2 * Math.PI) * R;
-            const cs = nodes.filter((n) => n.cluster === c);
-            const r = 80 + Math.log(cs.length + 1) * 30;
-            cs.forEach((n, j) => {
-              const a = (j / cs.length) * 2 * Math.PI;
-              graph.addNode(n.id, {
-                label: n.label,
-                x: cx + Math.cos(a) * r,
-                y: cy + Math.sin(a) * r,
-                size: n.size,
-                color: n.color,
-                cluster: n.cluster,
-                path: n.path,
-                loc: n.loc,
-                complexity: n.complexity,
-                commits: n.commits,
-              });
-            });
+        const Graphology = window.graphology?.Graph || window.Graph;
+        const Sigma = window.sigma?.Sigma || window.Sigma;
+        const graph = new Graphology();
+
+        const clusters = [...new Set(nodes.map(n => n.cluster))];
+        const R = 350;
+        clusters.forEach((c, i) => {
+          const cx = Math.cos((i / clusters.length) * 2 * Math.PI) * R;
+          const cy = Math.sin((i / clusters.length) * 2 * Math.PI) * R;
+          const cs = nodes.filter(n => n.cluster === c);
+          const r = 80 + Math.log(cs.length + 1) * 30;
+          cs.forEach((n, j) => {
+            const a = (j / cs.length) * 2 * Math.PI;
+            const ext = n.label.split(".").pop()?.toLowerCase();
+            let nodeColor = n.color;
+            if (["ts","js"].includes(ext)) nodeColor="#4ea1ff";
+            else if (ext==="py") nodeColor="#ffcc00";
+            else if (["css","html"].includes(ext)) nodeColor="#ff66cc";
+            else if (["json","yml","yaml"].includes(ext)) nodeColor="#999";
+            graph.addNode(n.id,{label:n.label,x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,
+              size:n.size,color:nodeColor,cluster:n.cluster,path:n.path,
+              loc:n.loc,complexity:n.complexity,commits:n.commits});
           });
+        });
+        edges.forEach(e => {
+          if (graph.hasNode(e.from) && graph.hasNode(e.to))
+            try { graph.addEdge(e.from,e.to,{color:"rgba(0,0,0,0.15)",size:0.6}); } catch {}
+        });
 
-          edges.forEach((e) => {
-            if (graph.hasNode(e.from) && graph.hasNode(e.to)) {
-              try {
-                graph.addEdge(e.from, e.to, { color: "rgba(0,0,0,0.15)", size: 0.6 });
-              } catch {}
-            }
-          });
-
-          const renderer = new Sigma(graph, container, {
-            renderLabels: true,
-            labelRenderer: (ctx, d) => {
-              ctx.fillStyle = "#000"; // black labels for light background
-              ctx.font = "12px Inter";
-              ctx.fillText(d.label, d.x + d.size + 2, d.y + 3);
-            },
-            settings: {
-              backgroundColor: "#ffffff", // white background
-            },
-          });
-          container.style.opacity = 1;
-
-          const camera = renderer.getCamera();
-
-          // --- Minimap ---
-          const pos = graph.nodes().map((id) => renderer.getNodeDisplayData(id));
-          const xs = pos.map((p) => p.x),
-            ys = pos.map((p) => p.y);
-          const minX = Math.min(...xs),
-            maxX = Math.max(...xs);
-          const minY = Math.min(...ys),
-            maxY = Math.max(...ys);
-          const w = maxX - minX,
-            h = maxY - minY;
-
-          function drawMini() {
-            ctxMini.clearRect(0, 0, 180, 120);
-            ctxMini.fillStyle = "rgba(0,0,0,0.8)";
-            pos.forEach((p) => {
-              const x = ((p.x - minX) / w) * 180;
-              const y = ((p.y - minY) / h) * 120;
-              ctxMini.fillRect(x, y, 2, 2);
-            });
+        const renderer = new Sigma(graph, container, {
+          renderLabels:true,
+          labelRenderer:(ctx,d)=>{
+            ctx.fillStyle="#000";
+            ctx.font="12px Inter";
+            ctx.fillText(d.label,d.x+d.size+2,d.y+3);
           }
+        });
+        container.style.opacity=1;
+        const camera=renderer.getCamera();
 
-          function updateView() {
-            const s = camera.getState();
-            const r = s.ratio;
-            const cx = s.x,
-              cy = s.y;
-            const viewW = 180 / r / 4,
-              viewH = 120 / r / 4;
-            const px = ((cx - minX) / w) * 180 - viewW / 2;
-            const py = ((cy - minY) / h) * 120 - viewH / 2;
-            viewRect.style.left = px + "px";
-            viewRect.style.top = py + "px";
-            viewRect.style.width = viewW + "px";
-            viewRect.style.height = viewH + "px";
+        // 🧭 Guided Tour
+        setTimeout(()=>{
+          const tour=document.createElement("div");
+          tour.style.cssText="position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity 0.8s ease;";
+          tour.innerText="Welcome to Orbyt 🌌";
+          document.body.appendChild(tour);
+          setTimeout(()=>tour.style.opacity=1,200);
+          const steps=[
+            {text:"🧭 Zooming into your root folder...",zoom:0.5},
+            {text:"🔍 Highlighting key clusters...",zoom:0.25},
+            {text:"💡 Gemini narrates insights as you explore!",zoom:0.1}
+          ];
+          let i=0;const next=()=>{if(i>=steps.length){setTimeout(()=>tour.remove(),1200);return;}
+            tour.innerText=steps[i].text;
+            camera.animate({ratio:steps[i].zoom},{duration:1000});
+            i++;setTimeout(next,1800);};
+          setTimeout(next,1200);
+        },1000);
+
+        // 🧠 Tooltip
+        renderer.on("enterNode",({node})=>{
+          const d=graph.getNodeAttributes(node);
+          tooltip.innerHTML=\`<b>\${d.label}</b><br>📂 \${d.cluster}<br>📏 \${d.loc} | ⚙️ \${d.complexity}\`;
+          tooltip.classList.add("show");
+        });
+        renderer.on("leaveNode",()=>tooltip.classList.remove("show"));
+        container.addEventListener("mousemove",e=>{
+          tooltip.style.left=e.pageX+15+"px";
+          tooltip.style.top=e.pageY+10+"px";
+        });
+
+        // 🪟 Info panel
+        renderer.on("clickNode",({node})=>{
+          const d=graph.getNodeAttributes(node);
+          let info=document.getElementById("infoBox");
+          if(!info){info=document.createElement("div");info.id="infoBox";document.body.appendChild(info);}
+          info.innerHTML=\`
+            <button id='closeInfo'>✖</button>
+            <h2>\${d.label}</h2><small>\${d.path}</small><br><br>
+            📏 LOC \${d.loc} | ⚙️ \${d.complexity} | 🕒 \${d.commits}<br><br>
+            <button id='openFileBtn'>📂 Open</button>
+            <button id='explainBtn'>🧠 Explain</button>
+            <div id='explainArea' style='margin-top:10px;font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace;'></div>\`;
+          info.classList.add("visible");
+          document.getElementById("closeInfo").onclick=()=>info.classList.remove("visible");
+          document.getElementById("openFileBtn").onclick=()=>vscode.postMessage({type:"openFile",path:d.path});
+          document.getElementById("explainBtn").onclick=()=>{
+            const area=document.getElementById("explainArea");
+            area.innerHTML="⏳ Fetching Gemini insights...";
+            vscode.postMessage({type:"explainFile",path:d.path});
+          };
+        });
+
+        // ✅ Listen for Gemini explanation results
+        window.addEventListener("message",(e2)=>{
+          if(e2.data.type==="explanation"){
+            const el=document.getElementById("explainArea");
+            if(el && e2.data.explanation)
+              el.innerHTML=e2.data.explanation.replace(/\\n/g,"<br>");
           }
+        });
 
-          renderer.on("afterRender", () => {
-            drawMini();
-            updateView();
-          });
-
-          // --- Minimap click + drag ---
-          let dragging = false;
-          mini.addEventListener("mousedown", (e) => {
-            dragging = true;
-            moveCamera(e);
-          });
-          window.addEventListener("mouseup", () => (dragging = false));
-          window.addEventListener("mousemove", (e) => {
-            if (dragging) moveCamera(e);
-          });
-
-          function moveCamera(e) {
-            const rect = mini.getBoundingClientRect();
-            const mx = e.clientX - rect.left,
-              my = e.clientY - rect.top;
-            const targetX = minX + (mx / 180) * w;
-            const targetY = minY + (my / 120) * h;
-            camera.animate({ x: targetX, y: targetY }, { duration: 100 });
-          }
-
-          // Ripple + tooltip
-          container.addEventListener("click", (e) => {
-            const ripple = document.createElement("span");
-            ripple.className = "ripple";
-            ripple.style.left = e.clientX + "px";
-            ripple.style.top = e.clientY + "px";
-            document.body.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
-          });
-
-          renderer.on("enterNode", ({ node }) => {
-            const d = graph.getNodeAttributes(node);
-            tooltip.innerHTML = \`<b>\${d.label}</b><br>📂 \${d.cluster}<br>📏 \${d.loc} | ⚙️ \${d.complexity}\`;
-            tooltip.classList.add("show");
-          });
-          renderer.on("leaveNode", () => tooltip.classList.remove("show"));
-          container.addEventListener("mousemove", (e) => {
-            tooltip.style.left = e.pageX + 15 + "px";
-            tooltip.style.top = e.pageY + 10 + "px";
-          });
-
-          // Info Box
-          renderer.on("clickNode", ({ node }) => {
-            const d = graph.getNodeAttributes(node);
-            let info = document.getElementById("infoBox");
-            if (!info) {
-              info = document.createElement("div");
-              info.id = "infoBox";
-              document.body.appendChild(info);
-            }
-            info.innerHTML = \`
-              <h2>\${d.label}</h2>
-              <small>\${d.path}</small><br><br>
-              📏 LOC \${d.loc} | ⚙️ \${d.complexity} | 🕒 \${d.commits}<br><br>
-              <button id='openFileBtn'>📂 Open</button>
-              <button id='explainBtn'>🧠 Explain</button>
-              <div id='explainArea' style='margin-top:10px;font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace;'></div>
-            \`;
-            info.classList.add("visible");
-            document.getElementById("openFileBtn").onclick = () =>
-              vscode.postMessage({ type: "openFile", path: d.path });
-            document.getElementById("explainBtn").onclick = () => {
-              document.getElementById("explainArea").innerHTML = "⏳ Fetching Gemini insights...";
-              vscode.postMessage({ type: "explainFile", path: d.path });
-            };
-          });
-
-          window.addEventListener("message", (e2) => {
-            if (e2.data.type === "explanation") {
-              const el = document.getElementById("explainArea");
-              if (el && e2.data.explanation)
-                el.innerHTML = e2.data.explanation.replace(/\\n/g, "<br>");
-            }
-          });
-
-          status.innerHTML = \`✅ \${stats.totalFiles} files • \${stats.clusters} clusters<br>📊 Avg Complexity: \${stats.avgComplexity}\`;
+        // 📊 Health Dashboard
+        const healthCanvas=document.getElementById("healthCanvas");
+        const metricText=document.getElementById("metricText");
+        if(healthCanvas&&metricText){
+          const ctx=healthCanvas.getContext("2d");
+          const avg=parseFloat(stats.avgComplexity||"0");
+          const coupled=stats.clusters||0;
+          const edits=(stats.mostEdited||[]).length;
+          const score=Math.max(0,Math.min(100,100-avg*1.5+coupled*0.5-edits*2));
+          metricText.textContent=\`Health: \${score.toFixed(0)} / 100\`;
+          let progress=0;
+          const draw=(s)=>{
+            const c=60,r=40;
+            ctx.clearRect(0,0,120,120);
+            ctx.lineWidth=8;ctx.lineCap="round";
+            ctx.strokeStyle="#eee";
+            ctx.beginPath();ctx.arc(c,c,r,0,2*Math.PI);ctx.stroke();
+            const grad=ctx.createLinearGradient(0,0,120,0);
+            grad.addColorStop(0,"#4cd964");
+            grad.addColorStop(.5,"#ffcc00");
+            grad.addColorStop(1,"#ff3b30");
+            ctx.strokeStyle=grad;
+            ctx.beginPath();
+            ctx.arc(c,c,r,-Math.PI/2,(s/100)*2*Math.PI-Math.PI/2);
+            ctx.stroke();
+            ctx.fillStyle="#333";
+            ctx.font="bold 16px Inter";
+            ctx.textAlign="center";ctx.textBaseline="middle";
+            ctx.fillText(\`\${Math.round(s)}%\`,c,c);
+          };
+          const animate=()=>{progress+=(score-progress)*0.08;draw(progress);
+            if(Math.abs(progress-score)>0.5)requestAnimationFrame(animate);};
+          animate();
         }
+
+        // ⌨️ Command Palette
+        
+        document.addEventListener("keydown",(e)=>{
+          if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){
+            e.preventDefault();
+            paletteOverlay.style.display="flex";
+            paletteInput.focus();
+            paletteList.innerHTML=commands.map(c=>"<div>"+c.name+"</div>").join("");
+          }else if(e.key==="Escape"){
+            paletteOverlay.style.display="none";
+          }
+        });
+        paletteList.addEventListener("click",(e)=>{
+          const item=e.target.closest("div");if(!item)return;
+          const cmd=commands.find(c=>c.name===item.textContent);
+          if(cmd)cmd.action();
+          paletteOverlay.style.display="none";
+        });
+
+        status.innerHTML=\`✅ \${stats.totalFiles} files • \${stats.clusters} clusters<br>📊 Avg Complexity: \${stats.avgComplexity}\`;
       });
     </script>
   </body>
   </html>`;
 }
-
-
-
+ 
 
 /** 🔐 Nonce generator */
 function getNonce() {
