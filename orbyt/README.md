@@ -1,4 +1,4 @@
-# 🌌 Orbyt — CodeAtlas for Your Codebase
+# 🌌 Orbyt
 
 **Orbyt** transforms your repository into a **living galaxy** where every file, class, and dependency becomes part of a visual map.  
 Explore your codebase like a city — **files are buildings, functions are rooms, and imports are roads** — and let **Gemini AI** explain your code in three levels of understanding.
