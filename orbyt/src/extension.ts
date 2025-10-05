@@ -76,39 +76,33 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /** 🧠 Build repository dependency graph */
+/** 🧠 Build repository dependency graph with folder encapsulation */
 export async function buildRepoGraph() {
   const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders) {
+  if (!workspaceFolders){
     return { nodes: [], edges: [], stats: {} };
-  }
+  } 
 
   const root = workspaceFolders[0].uri.fsPath;
-
-  // Load .gitignore
   const gitignorePath = path.join(root, ".gitignore");
   const ig = ignore();
-  if (fs.existsSync(gitignorePath)) {
+  if (fs.existsSync(gitignorePath)){
     ig.add(fs.readFileSync(gitignorePath, "utf8"));
-  }
+  } 
 
   const files: string[] = [];
   const exts = /\.(js|ts|jsx|tsx|py|java|cpp|c|cs|php|rb|go|rs|html|css|json|sh|yml|yaml)$/i;
 
+  /** 🔍 Walk the directory recursively */
   function walk(dir: string): void {
     let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       const rel = path.relative(root, full);
-      if (ig.ignores(rel)) {
+      if (ig.ignores(rel)){
         continue;
       }
-
       if (entry.isDirectory()) {
         if (!["node_modules", ".git", "dist", "out", ".next", "build"].includes(entry.name)) {
           walk(full);
@@ -118,38 +112,88 @@ export async function buildRepoGraph() {
       }
     }
   }
-
   walk(root);
 
   const graph = new Graph();
   const fileIndex = new Map<string, string>();
+  const folderSet = new Set<string>();
 
+  /** 📁 Collect all folder paths */
   for (const f of files) {
-    fileIndex.set(path.basename(f), f);
+    const rel = path.relative(root, f);
+    const parts = rel.split(path.sep);
+    for (let i = 0; i < parts.length - 1; i++) {
+      folderSet.add(parts.slice(0, i + 1).join(path.sep));
+    }
   }
 
-  for (const file of files) {
-    let content = "";
-    try {
-      content = fs.readFileSync(file, "utf8");
-    } catch {
-      continue;
+  /** 🎨 Create folder nodes */
+  for (const folder of folderSet) {
+    const depth = folder.split(path.sep).length;
+    const color = clusterColor(folder, depth);
+    if (!graph.hasNode(folder)) {
+      graph.addNode(folder, {
+        id: folder,
+        label: "📁 " + path.basename(folder),
+        cluster: folder,
+        path: path.join(root, folder),
+        loc: 0,
+        complexity: 0,
+        commits: 0,
+        color,
+        size: 12 + Math.max(0, 3 - depth) * 2,
+      });
     }
+  }
 
+  /** 🧩 Add parent→child folder edges */
+  for (const folder of folderSet) {
+    const parent = path.dirname(folder);
+    if (parent && parent !== "." && graph.hasNode(parent)) {
+      graph.addEdge(parent, folder, { color: "rgba(255,255,255,0.15)", size: 0.6 });
+    }
+  }
+
+  /** 🗂️ Add file nodes and link them to folders */
+  for (const f of files) {
+    fileIndex.set(path.basename(f), f);
+    let content = "";
+    try { content = fs.readFileSync(f, "utf8"); } catch {}
     const loc = content.split("\n").length;
     const complexity = (content.match(/\b(if|for|while|case|catch|&&|\|\|)\b/g) || []).length + 1;
 
     let commits = 0;
     try {
-      const out = execSync(`git log --oneline -- "${file}"`, { cwd: root, encoding: "utf8" });
+      const out = execSync(`git log --oneline -- "${f}"`, { cwd: root, encoding: "utf8" });
       commits = out.split("\n").filter(Boolean).length;
-    } catch {
-      commits = 0;
+    } catch {}
+
+    const rel = path.relative(root, f);
+    const folder = path.dirname(rel) || "(root)";
+    const color = clusterColor(folder, folder.split(path.sep).length + 1);
+
+    graph.addNode(f, {
+      id: f,
+      label: path.basename(f),
+      cluster: folder,
+      path: f,
+      loc,
+      complexity,
+      commits,
+      color,
+      size: Math.max(4, Math.min(14, 5 + Math.log10(loc + 1))),
+    });
+
+    // connect to encapsulating folder
+    if (graph.hasNode(folder)) {
+      graph.addEdge(folder, f, { color: "rgba(255,255,255,0.2)", size: 0.7 });
     }
+  }
 
-    const rel = path.relative(root, file);
-    const cluster = rel.includes(path.sep) ? rel.split(path.sep)[0] : "(root)";
-
+  /** 🔗 Parse imports & connect across folders */
+  for (const file of files) {
+    let content = "";
+    try { content = fs.readFileSync(file, "utf8"); } catch {}
     const imports: string[] = [];
     try {
       if (/\.(js|ts|jsx|tsx)$/i.test(file)) {
@@ -157,10 +201,9 @@ export async function buildRepoGraph() {
           sourceType: "unambiguous",
           plugins: ["typescript", "jsx", "classProperties", "decorators-legacy"],
         });
-
         traverse(ast, {
           ImportDeclaration(p: NodePath<t.ImportDeclaration>) {
-            if (p.node.source?.value) {
+            if (p.node.source?.value){
               imports.push(p.node.source.value);
             }
           },
@@ -175,55 +218,45 @@ export async function buildRepoGraph() {
           },
         });
       }
-    } catch {
-      // ignore parse errors
-    }
+    } catch {}
 
-    if (!graph.hasNode(file)) {
-      graph.addNode(file, {
-        id: file,
-        label: path.basename(file),
-        cluster,
-        path: file,
-        loc,
-        complexity,
-        commits,
-        color: clusterColor(cluster),
-        size: Math.max(4, Math.min(14, 5 + Math.log10(loc + 1))),
-      });
-    }
-
+    const fromFolder = path.dirname(path.relative(root, file)) || "(root)";
     for (const dep of imports) {
       const depFile =
         fileIndex.get(dep) ||
         fileIndex.get(dep + ".js") ||
         fileIndex.get(dep + ".ts") ||
         Array.from(fileIndex.entries()).find(([k]) => dep.endsWith(k))?.[1];
-      if (depFile && graph.hasNode(depFile) && !graph.hasEdge(file, depFile)) {
-        graph.addEdge(file, depFile, { color: "#ccc", weight: 1 });
+      if (depFile && graph.hasNode(depFile)) {
+        const toFolder = path.dirname(path.relative(root, depFile)) || "(root)";
+        const intra = fromFolder === toFolder;
+        const color = intra ? "rgba(255,255,255,0.08)" : "rgba(78,161,255,0.45)";
+        const width = intra ? 0.5 : 1.4;
+        graph.addEdge(file, depFile, { color, size: width });
+        if (!intra && graph.hasNode(fromFolder) && graph.hasNode(toFolder)) {
+          graph.addEdge(fromFolder, toFolder, { color: "rgba(78,161,255,0.6)", size: 2.2 });
+        }
       }
     }
   }
 
-  const nodes: NodeData[] = graph.nodes().map((id) => {
-  const attrs = graph.getNodeAttributes(id) as Omit<NodeData, "id">;
-  return { id, ...attrs };
-});
-
-  const edges = graph.edges().map((edge) => {
-    const [from, to] = graph.extremities(edge);
+  /** 📊 Stats summary */
+  const nodes = graph.nodes().map(id => ({ id, ...graph.getNodeAttributes(id) }));
+  const edges = graph.edges().map(e => {
+    const [from, to] = graph.extremities(e);
     return { from, to };
   });
 
-  // 📊 Analytics
   const avgComplexity =
     files.length > 0
       ? files.reduce((acc, f) => acc + (graph.getNodeAttribute(f, "complexity") || 0), 0) / files.length
       : 0;
+
   const mostEdited = [...graph.nodes()]
+    .filter(n => graph.getNodeAttribute(n, "commits") > 0)
     .sort((a, b) => (graph.getNodeAttribute(b, "commits") || 0) - (graph.getNodeAttribute(a, "commits") || 0))
     .slice(0, 5)
-    .map((n) => ({
+    .map(n => ({
       file: graph.getNodeAttribute(n, "label"),
       commits: graph.getNodeAttribute(n, "commits"),
     }));
@@ -235,10 +268,31 @@ export async function buildRepoGraph() {
       avgComplexity: avgComplexity.toFixed(2),
       mostEdited,
       totalFiles: files.length,
-      clusters: [...new Set(nodes.map((n) => n.cluster))].length,
+      clusters: [...new Set((nodes as any[]).map((n: any) => n.cluster))].length,
     },
   };
 }
+
+/** 🎨 Folder-aware color palette */
+function clusterColor(cluster: string, depth = 1) {
+  const base = [
+    "#4ea1ff", "#ff9966", "#cc99ff", "#99ff99", "#ffcc66",
+    "#ff6699", "#66ffcc", "#aaaaaa", "#ff6666", "#66ff66",
+  ];
+  let hash = 0;
+  for (let i = 0; i < cluster.length; i++) {
+    hash = cluster.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const baseColor = base[Math.abs(hash) % base.length];
+  // Fade brightness by depth
+  const fade = Math.max(0.5, 1 - depth * 0.08);
+  const c = parseInt(baseColor.slice(1), 16);
+  const r = ((c >> 16) & 255) * fade,
+        g = ((c >> 8) & 255) * fade,
+        b = (c & 255) * fade;
+  return `rgb(${r},${g},${b})`;
+}
+
 
 /** 🧠 Gemini explanation generator */
 /** 🧠 Gemini explanation generator — simple and clean */
@@ -254,6 +308,8 @@ Explain the purpose and functionality of the file ${path.basename(filePath)} in 
 2. Provide a brief intermediate explanation of what the code does.
 3. Give a concise technical description for an expert.
 Keep each paragraph under 5 sentences and do not use markdown or formatting.
+
+make the titles bold markdown
 
 SEPERATE BY Explain it Like I'm 5, INTERMEDIATE, TECHNICAL as the titles of each paragraph.
 Code (first 3000 characters):
@@ -283,32 +339,19 @@ ${code.slice(0, 3000)}
 
 
 /** 🎨 Cluster color palette */
-function clusterColor(cluster: string) {
-  const palette = [
-    "#66ccff",
-    "#ff9966",
-    "#cc99ff",
-    "#99ff99",
-    "#ffcc66",
-    "#ff6699",
-    "#66ffcc",
-    "#aaaaaa",
-    "#ff6666",
-    "#66ff66",
-  ];
-  let hash = 0;
-  for (let i = 0; i < cluster.length; i++) {
-    hash = cluster.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return palette[Math.abs(hash) % palette.length];
-}
+
 
 /** 🌐 Webview UI */
+/** 🌐 Enhanced Webview UI with animations and guided tour */
+/** 🌐 Professional UI/UX Polished Webview */
+/** 🌐 Orbyt – polished professional UI/UX with minimap + ripple feedback */
+/** 🌐 Orbyt — Polished UI/UX with WORKING Minimap + White Node Labels */
+/** 🌐 Orbyt — Fully functional minimap + drag navigation + white labels */
 function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: string): string {
   const nonce = getNonce();
   return `
   <!DOCTYPE html>
-  <html>
+  <html lang="en">
   <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy"
@@ -316,52 +359,177 @@ function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: s
                style-src 'unsafe-inline' ${cspSource};
                script-src 'unsafe-eval' 'nonce-${nonce}' ${cspSource};">
     <title>Orbyt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-      html, body { margin:0; padding:0; width:100%; height:100%; background:#fafafa; font-family:sans-serif; }
-      #graph-container { width:100%; height:100vh; }
-      #status { position:absolute; bottom:10px; left:15px; font-size:13px; color:#555; background:rgba(255,255,255,0.8); padding:4px 8px; border-radius:6px; }
-      .tooltip { position:absolute; padding:8px 12px; background:#222; color:#fff; border-radius:6px; font-size:13px;
-        opacity:0; pointer-events:none; transition:opacity .2s; }
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --card: #f7f8fa;
+        --accent: #007aff;
+        --muted: #666;
+        --shadow: rgba(0,0,0,0.08);
+        --tooltip-bg: rgba(0,0,0,0.8);
+      }
+
+      html,body {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: 'Inter', sans-serif;
+        overflow: hidden;
+        transition: background 0.4s ease, color 0.4s ease;
+      }
+
+      #graph-container { width:100%; height:100vh; opacity:0; transition:opacity .6s ease; }
+
+      #status {
+        position:absolute; bottom:20px; left:20px;
+        background: var(--card);
+        box-shadow: 0 2px 10px var(--shadow);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--muted);
+        backdrop-filter: blur(6px);
+      }
+
+      .tooltip {
+        position:absolute;
+        background: var(--tooltip-bg);
+        color:#fff;
+        border-radius:8px;
+        padding:8px 12px;
+        font-size:13px;
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .3s ease,transform .3s ease;
+        transform:translateY(4px);
+      }
+      .tooltip.show{opacity:1;transform:translateY(0);}
+      
+
+      #infoBox {
+        position:absolute; top:0; right:-360px;
+        width:340px; height:100%;
+        background: var(--card);
+        box-shadow:-4px 0 16px var(--shadow);
+        padding:24px; font-size:14px;
+        overflow-y:auto;
+        transition:right .4s cubic-bezier(.4,0,.2,1);
+        backdrop-filter:blur(10px);
+      }
+      #infoBox.visible{ right:0; }
+
+      #infoBox button {
+        margin-top:8px; margin-right:8px;
+        padding:6px 10px;
+        border:none; border-radius:6px;
+        background: var(--accent); color:#fff;
+        font-weight:500; cursor:pointer;
+        transition:opacity .2s,transform .2s;
+      }
+      #infoBox button:hover{ opacity:.85; transform:translateY(-1px); }
+
+      #commandBar {
+        position:absolute; bottom:24px; right:24px;
+        display:flex; flex-direction:column; gap:10px;
+      }
+      .cmdBtn {
+        width:40px; height:40px;
+        background: var(--card);
+        border-radius:50%;
+        box-shadow:0 2px 8px var(--shadow);
+        display:flex; align-items:center; justify-content:center;
+        font-size:18px;
+        cursor:pointer;
+        color: var(--fg);
+        transition: all .25s ease;
+      }
+      .cmdBtn:hover {
+        transform:translateY(-3px);
+        background: var(--accent);
+        color:#fff;
+      }
+
+      #minimap {
+        position:absolute; top:20px; right:20px;
+        width:180px; height:120px;
+        border:2px solid var(--accent);
+        border-radius:8px;
+        background: var(--card);
+        box-shadow:0 2px 8px var(--shadow);
+        overflow:hidden; cursor:grab;
+      }
+      #minimap:active{cursor:grabbing;}
+      #miniCanvas{width:100%;height:100%;}
+      #viewRect {
+        position:absolute;
+        border:2px solid var(--accent);
+        background: rgba(0,122,255,0.1);
+        border-radius:4px;
+        pointer-events:none;
+      }
+
+      .ripple {
+        position:absolute;
+        border-radius:50%;
+        transform:scale(0);
+        animation:rippleAnim .6s linear;
+        background: rgba(0,122,255,0.25);
+        pointer-events:none;
+      }
+      @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
     </style>
   </head>
   <body>
     <div id="graph-container"></div>
     <div id="status">🌀 Building your code map...</div>
     <div class="tooltip" id="tooltip"></div>
+    <div id="commandBar"><div id="themeToggle" class="cmdBtn">☀️</div></div>
+    <div id="minimap">
+      <canvas id="miniCanvas" width="180" height="120"></canvas>
+      <div id="viewRect"></div>
+    </div>
 
     <script nonce="${nonce}" src="${graphologyUri}"></script>
     <script nonce="${nonce}" src="${sigmaUri}"></script>
 
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      const Graphology = window.graphology?.Graph || window.Graph;
-      const Sigma = window.sigma?.Sigma || window.Sigma;
-
       vscode.postMessage({ type: "ready" });
+
+      const tooltip = document.getElementById("tooltip");
+      const status = document.getElementById("status");
+      const mini = document.getElementById("minimap");
+      const miniCanvas = document.getElementById("miniCanvas");
+      const ctxMini = miniCanvas.getContext("2d");
+      const viewRect = document.getElementById("viewRect");
+      const container = document.getElementById("graph-container");
 
       window.addEventListener("message", (e) => {
         const msg = e.data;
         if (msg.type === "graphData") {
           const { nodes, edges, stats } = msg.data;
+          const Graphology = window.graphology?.Graph || window.Graph;
+          const Sigma = window.sigma?.Sigma || window.Sigma;
           const graph = new Graphology();
-          const clusters = [...new Set(nodes.map(n => n.cluster))];
-          const R = 350;
 
-          clusters.forEach((cluster, ci) => {
-            const cx = Math.cos((ci / clusters.length) * 2 * Math.PI) * R;
-            const cy = Math.sin((ci / clusters.length) * 2 * Math.PI) * R;
-            const clusterNodes = nodes.filter(n => n.cluster === cluster);
-            const r = 80 + Math.log(clusterNodes.length + 1) * 30;
-            clusterNodes.forEach((n, i) => {
-              const a = (i / clusterNodes.length) * 2 * Math.PI;
-              const offset = Math.random() * 10;
+          const clusters = [...new Set(nodes.map((n) => n.cluster))];
+          const R = 350;
+          clusters.forEach((c, i) => {
+            const cx = Math.cos((i / clusters.length) * 2 * Math.PI) * R;
+            const cy = Math.sin((i / clusters.length) * 2 * Math.PI) * R;
+            const cs = nodes.filter((n) => n.cluster === c);
+            const r = 80 + Math.log(cs.length + 1) * 30;
+            cs.forEach((n, j) => {
+              const a = (j / cs.length) * 2 * Math.PI;
               graph.addNode(n.id, {
                 label: n.label,
-                x: cx + Math.cos(a) * r + offset,
-                y: cy + Math.sin(a) * r + offset,
+                x: cx + Math.cos(a) * r,
+                y: cy + Math.sin(a) * r,
                 size: n.size,
                 color: n.color,
-                cluster,
+                cluster: n.cluster,
                 path: n.path,
                 loc: n.loc,
                 complexity: n.complexity,
@@ -370,49 +538,129 @@ function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: s
             });
           });
 
-          edges.forEach(e => {
+          edges.forEach((e) => {
             if (graph.hasNode(e.from) && graph.hasNode(e.to)) {
-              try { graph.addEdge(e.from, e.to, { color: "rgba(0,0,0,0.15)", size: 0.7 }); } catch {}
+              try {
+                graph.addEdge(e.from, e.to, { color: "rgba(0,0,0,0.15)", size: 0.6 });
+              } catch {}
             }
           });
 
-          const renderer = new Sigma(graph, document.getElementById("graph-container"));
-          const tooltip = document.getElementById("tooltip");
+          const renderer = new Sigma(graph, container, {
+            renderLabels: true,
+            labelRenderer: (ctx, d) => {
+              ctx.fillStyle = "#000"; // black labels for light background
+              ctx.font = "12px Inter";
+              ctx.fillText(d.label, d.x + d.size + 2, d.y + 3);
+            },
+            settings: {
+              backgroundColor: "#ffffff", // white background
+            },
+          });
+          container.style.opacity = 1;
+
+          const camera = renderer.getCamera();
+
+          // --- Minimap ---
+          const pos = graph.nodes().map((id) => renderer.getNodeDisplayData(id));
+          const xs = pos.map((p) => p.x),
+            ys = pos.map((p) => p.y);
+          const minX = Math.min(...xs),
+            maxX = Math.max(...xs);
+          const minY = Math.min(...ys),
+            maxY = Math.max(...ys);
+          const w = maxX - minX,
+            h = maxY - minY;
+
+          function drawMini() {
+            ctxMini.clearRect(0, 0, 180, 120);
+            ctxMini.fillStyle = "rgba(0,0,0,0.8)";
+            pos.forEach((p) => {
+              const x = ((p.x - minX) / w) * 180;
+              const y = ((p.y - minY) / h) * 120;
+              ctxMini.fillRect(x, y, 2, 2);
+            });
+          }
+
+          function updateView() {
+            const s = camera.getState();
+            const r = s.ratio;
+            const cx = s.x,
+              cy = s.y;
+            const viewW = 180 / r / 4,
+              viewH = 120 / r / 4;
+            const px = ((cx - minX) / w) * 180 - viewW / 2;
+            const py = ((cy - minY) / h) * 120 - viewH / 2;
+            viewRect.style.left = px + "px";
+            viewRect.style.top = py + "px";
+            viewRect.style.width = viewW + "px";
+            viewRect.style.height = viewH + "px";
+          }
+
+          renderer.on("afterRender", () => {
+            drawMini();
+            updateView();
+          });
+
+          // --- Minimap click + drag ---
+          let dragging = false;
+          mini.addEventListener("mousedown", (e) => {
+            dragging = true;
+            moveCamera(e);
+          });
+          window.addEventListener("mouseup", () => (dragging = false));
+          window.addEventListener("mousemove", (e) => {
+            if (dragging) moveCamera(e);
+          });
+
+          function moveCamera(e) {
+            const rect = mini.getBoundingClientRect();
+            const mx = e.clientX - rect.left,
+              my = e.clientY - rect.top;
+            const targetX = minX + (mx / 180) * w;
+            const targetY = minY + (my / 120) * h;
+            camera.animate({ x: targetX, y: targetY }, { duration: 100 });
+          }
+
+          // Ripple + tooltip
+          container.addEventListener("click", (e) => {
+            const ripple = document.createElement("span");
+            ripple.className = "ripple";
+            ripple.style.left = e.clientX + "px";
+            ripple.style.top = e.clientY + "px";
+            document.body.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+          });
 
           renderer.on("enterNode", ({ node }) => {
             const d = graph.getNodeAttributes(node);
-            tooltip.innerHTML = \`
-              <b>\${d.label}</b><br>
-              📂 <i>\${d.cluster}</i><br>
-              📏 LOC: \${d.loc} | ⚙️ \${d.complexity} | 🕒 \${d.commits}
-            \`;
-            tooltip.style.opacity = 1;
+            tooltip.innerHTML = \`<b>\${d.label}</b><br>📂 \${d.cluster}<br>📏 \${d.loc} | ⚙️ \${d.complexity}\`;
+            tooltip.classList.add("show");
           });
-          renderer.on("leaveNode", () => tooltip.style.opacity = 0);
+          renderer.on("leaveNode", () => tooltip.classList.remove("show"));
+          container.addEventListener("mousemove", (e) => {
+            tooltip.style.left = e.pageX + 15 + "px";
+            tooltip.style.top = e.pageY + 10 + "px";
+          });
 
+          // Info Box
           renderer.on("clickNode", ({ node }) => {
             const d = graph.getNodeAttributes(node);
-            const existing = document.getElementById("infoBox");
-            if (existing) existing.remove();
-
-            const info = document.createElement("div");
-            info.id = "infoBox";
-            info.style.position = "absolute";
-            info.style.top = "10px";
-            info.style.right = "10px";
-            info.style.background = "#fff";
-            info.style.padding = "12px";
-            info.style.borderRadius = "10px";
-            info.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
-            info.style.width = "320px";
+            let info = document.getElementById("infoBox");
+            if (!info) {
+              info = document.createElement("div");
+              info.id = "infoBox";
+              document.body.appendChild(info);
+            }
             info.innerHTML = \`
-              <b>\${d.label}</b><br><small>\${d.path}</small><br><br>
-              📏 LOC: \${d.loc} | ⚙️ \${d.complexity} | 🕒 \${d.commits}<br><br>
-              <button id="openFileBtn">📂 Open</button>
-              <button id="explainBtn">🧠 Explain</button>
-              <div id="explainArea" style="margin-top:10px;font-size:13px;color:#333;"></div>
+              <h2>\${d.label}</h2>
+              <small>\${d.path}</small><br><br>
+              📏 LOC \${d.loc} | ⚙️ \${d.complexity} | 🕒 \${d.commits}<br><br>
+              <button id='openFileBtn'>📂 Open</button>
+              <button id='explainBtn'>🧠 Explain</button>
+              <div id='explainArea' style='margin-top:10px;font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace;'></div>
             \`;
-            document.body.appendChild(info);
+            info.classList.add("visible");
             document.getElementById("openFileBtn").onclick = () =>
               vscode.postMessage({ type: "openFile", path: d.path });
             document.getElementById("explainBtn").onclick = () => {
@@ -424,28 +672,21 @@ function getWebviewContent(graphologyUri: string, sigmaUri: string, cspSource: s
           window.addEventListener("message", (e2) => {
             if (e2.data.type === "explanation") {
               const el = document.getElementById("explainArea");
-              if (el && e2.data.explanation) {
+              if (el && e2.data.explanation)
                 el.innerHTML = e2.data.explanation.replace(/\\n/g, "<br>");
-              }
             }
           });
 
-          document.getElementById("graph-container").addEventListener("mousemove", e => {
-            tooltip.style.left = e.pageX + 15 + "px";
-            tooltip.style.top = e.pageY + 10 + "px";
-          });
-
-          document.getElementById("status").innerHTML = \`
-            ✅ \${stats.totalFiles} files visualized (\${stats.clusters} clusters)<br>
-            📊 Avg Complexity: \${stats.avgComplexity}<br>
-            🔥 Top Edited: \${stats.mostEdited.map(f => f.file + " (" + f.commits + ")").join(", ")}
-          \`;
+          status.innerHTML = \`✅ \${stats.totalFiles} files • \${stats.clusters} clusters<br>📊 Avg Complexity: \${stats.avgComplexity}\`;
         }
       });
     </script>
   </body>
   </html>`;
 }
+
+
+
 
 /** 🔐 Nonce generator */
 function getNonce() {
