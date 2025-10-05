@@ -1,71 +1,46 @@
-# orbyt README
+# 🌌 Orbyt — CodeAtlas for Your Codebase
 
-This is the README for your extension "orbyt". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+**Orbyt** transforms your repository into a **living galaxy** where every file, class, and dependency becomes part of a visual map.  
+Explore your codebase like a city — **files are buildings, functions are rooms, and imports are roads** — and let **Gemini AI** explain your code in three levels of understanding.
 
 ---
 
-## Following extension guidelines
+## ✨ Features
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+### 🗺️ Visual Code Mapping
+Turn your entire repository into an interactive map powered by **Graphology** and **Sigma.js**:
+- Each **file/module** → a building  
+- Each **function/class** → a room  
+- Each **dependency/import** → a bridge  
+- Each **folder/cluster** → a constellation  
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+### 🧠 AI-Powered File Explanations
+Click any file node to instantly generate a **3-level explanation** using Google Gemini:
+1️⃣ **ELI5** – Explain it like I’m five  
+2️⃣ **Intermediate** – What it does  
+3️⃣ **Technical** – Deep technical summary  
 
-## Working with Markdown
+### 💬 Ask Gemini (Chatbot Mode)
+Chat directly with Gemini to understand your project:
+> “Where does this repo handle authentication?”  
+> “What are the most complex files?”  
+> “How do these modules connect?”
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+Gemini responds contextually — as if your repo itself could talk back.
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+### 📊 Code Analytics
+Gain insights from your repo structure:
+- Lines of Code (LOC) per file  
+- Code complexity (loops, conditionals, etc.)  
+- Commit frequency from Git history  
+- Folder-level clustering visualization  
 
-## For more information
+---
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+## 🧱 Built With
 
-**Enjoy!**
+- 🧩 **TypeScript** — VS Code extension & logic  
+- ⚛️ **Graphology + Sigma.js** — graph rendering engine  
+- 🧠 **Google Gemini 2.5 Flash API** — natural language explanations  
+- 🧬 **Babel Parser & Traverse** — for dependency mapping  
+- ⚙️ **Node.js + dotenv** — environment management  
